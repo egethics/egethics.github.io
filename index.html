@@ -1,0 +1,1001 @@
+<!doctype html>
+<html lang="ko" data-lang="both">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#03161c">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; media-src data: blob:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="EcoWash: an engineering ethics simulation on microplastics. 공학윤리 시뮬레이션 게임">
+<meta property="og:title" content="EcoWash Ethics Game">
+<meta property="og:description" content="Can we build a washing machine without microplastics? 미세플라스틱 없는 세탁기를 만들 수 있을까?">
+<style>html,body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}</style>
+<title>EcoWash Ethics Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbit&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<style>
+/* Layout: one narrow column like a research vessel's console, sticky gauge HUD on top, microfibres drifting behind. */
+:root{
+  --abyss:#03161c; --deep:#06222b; --panel:#0a2c36; --panel2:#0d3440; --line:#1d4b55; --line2:#2b6470;
+  --ink:#dcf2ef; --mute:#8fbab5; --dim:#5f8c88;
+  --teal:#4fd1c5; --gold:#f2c14e; --coral:#ff8a7a; --sky:#86b8ff; --red:#ff6b6b;
+  --f-disp:"Orbit","IBM Plex Sans KR",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+html,body{background:var(--abyss);color:var(--ink)}
+body{font-family:var(--f-body);font-size:16.5px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  background:radial-gradient(120% 70% at 50% -10%, #0b3a45 0%, var(--deep) 45%, var(--abyss) 100%) fixed;min-height:100%}
+#sea{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.wrap{position:relative;z-index:1;max-width:540px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+.mono{font-family:var(--f-mono)}
+b{font-weight:600}
+
+/* language display */
+.en,.ko{display:block}
+:root[data-lang="both"] .ko{color:var(--mute);font-size:.9em;margin-top:2px}
+:root[data-lang="en"] .ko,:root[data-lang="ko"] .en{display:none}
+.chip .en,.chip .ko,.gl .en,.gl .ko,.fl .en,.fl .ko,.glist b .en,.glist b .ko{display:inline}
+:root[data-lang="both"] .chip .ko,:root[data-lang="both"] .gl .ko,:root[data-lang="both"] .fl .ko,:root[data-lang="both"] .glist b .ko{font-size:inherit;margin:0 0 0 4px;color:inherit;opacity:.75}
+
+/* HUD */
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:rgba(3,22,28,.92)}
+#hud{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;margin:0 calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding:10px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));
+  background:rgba(3,22,28,.86);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.hud-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.hud-id{display:flex;gap:10px;align-items:baseline;min-width:0;font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;color:var(--teal)}
+#hud-team{color:var(--mute);letter-spacing:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#gauges{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.g{min-width:0}
+.gl{font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:root[data-lang="both"] .gl .ko{display:none}
+:root[data-lang="ko"] .gl .ko{display:inline}
+.gn{display:flex;align-items:baseline;gap:6px;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.gv{font-size:17px;font-weight:500;color:var(--ink)}
+.gd{font-size:12px;opacity:0}
+.gd.up{color:var(--teal)}.gd.down{color:var(--coral)}
+.gd.show{animation:pop 2.4s ease-out forwards}
+@keyframes pop{0%{opacity:0;transform:translateY(4px)}12%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0}}
+.gbar{height:4px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:3px}
+.gfill{display:block;height:100%;width:50%;transition:width .9s cubic-bezier(.2,.8,.2,1)}
+.sw-P{background:var(--gold)}.sw-T{background:var(--coral)}.sw-E{background:var(--teal)}.sw-R{background:var(--sky)}
+
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:8px;overflow:hidden;flex:none}
+.seg button{font:500 12px/1 var(--f-mono);color:var(--mute);background:transparent;border:0;padding:7px 9px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line2)}
+.seg button[aria-pressed="true"]{background:var(--teal);color:var(--abyss)}
+.seg.big{display:flex}.seg.big button{flex:1;font-size:13px;padding:11px 8px}
+
+/* type */
+.eyebrow{font-family:var(--f-mono);font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--teal)}
+.eyebrow .ko{letter-spacing:.04em;text-transform:none}
+.scr-h{display:flex;flex-direction:column;gap:4px;margin:22px 0 14px}
+.when{font-family:var(--f-mono);font-size:14.5px;color:var(--mute)}
+.when .en,.when .ko{display:inline}
+:root[data-lang="both"] .when .ko{font-size:inherit;margin:0;color:var(--dim)}
+:root[data-lang="both"] .when .ko::before{content:" \00b7  "}
+:root[data-lang="both"] .when .ko{font-size:inherit}
+.headline{font-family:var(--f-disp);font-weight:400;font-size:24px;line-height:1.35;margin:6px 0 10px;text-wrap:balance;color:#fff}
+:root[data-lang="both"] .headline .ko{font-size:18px;margin-top:6px}
+.scene{margin:0 0 16px;max-width:62ch}
+:root[data-lang="both"] .scene .ko{margin-top:8px}
+.prompt{font-family:var(--f-disp);font-weight:400;font-size:20px;margin:18px 0 10px;color:#fff}
+
+/* title */
+.title{min-height:calc(100vh - 80px);display:flex;flex-direction:column;justify-content:center;gap:10px;padding-block:32px}
+.brand{font-family:var(--f-mono);font-size:13px;letter-spacing:.3em;color:var(--mute);margin-top:18px}
+.title h1{font-family:var(--f-disp);font-weight:400;font-size:clamp(26px,7.4vw,36px);line-height:1.25;margin:0 0 18px;color:#fff;text-wrap:balance}
+.title-ko{font-family:var(--f-disp);font-size:16px;color:var(--teal);margin:-8px 0 18px}
+.ko-inline{display:block;opacity:.8}
+.startform{display:flex;flex-direction:column;gap:10px;background:rgba(10,44,54,.72);border:1px solid var(--line);border-radius:14px;padding:18px}
+.lab{font-family:var(--f-mono);font-size:13px;color:var(--mute);letter-spacing:.06em}
+.lab .en,.lab .ko{display:inline}.lab .ko{margin-left:6px}
+:root[data-lang="both"] .lab .ko{font-size:inherit}
+input{font:500 16px var(--f-body);color:var(--ink);background:var(--abyss);border:1px solid var(--line2);border-radius:8px;padding:12px 12px;width:100%;box-sizing:border-box}
+input:focus{outline:2px solid var(--teal);outline-offset:1px;border-color:transparent}
+input.bad{border-color:var(--coral);animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+/* buttons */
+.btn{font:600 16.5px var(--f-body);border-radius:10px;padding:13px 16px;cursor:pointer;border:1px solid var(--line2);background:transparent;color:var(--ink);display:inline-flex;align-items:center;justify-content:center;gap:8px;text-align:center}
+.btn .en,.btn .ko{display:inline}
+:root[data-lang="both"] .btn .ko{font-size:.86em;margin:0 0 0 2px;color:inherit;opacity:.7}
+.btn.primary{background:var(--teal);color:var(--abyss);border-color:var(--teal)}
+.btn.ghost{color:var(--mute)}
+.btn.armed{border-color:var(--coral);color:var(--coral)}
+.btn.wide{width:100%;margin-top:18px}
+.btn:focus-visible,.opt:focus-visible,.seg button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.pick{font-family:var(--f-mono)}
+
+/* NPC feed */
+.feed{border-left:1px solid var(--line2);padding-left:12px;margin:4px 0 8px;display:flex;flex-direction:column;gap:8px}
+.feed-h{font-family:var(--f-mono);font-size:14px;color:var(--dim);display:flex;align-items:center;gap:6px}
+.feed-h .en,.feed-h .ko{display:inline}.feed-h .ko{margin-left:4px}
+:root[data-lang="both"] .feed-h .ko{font-size:inherit;color:inherit}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 3px rgba(79,209,197,.18)}
+.msg{background:var(--panel);border:1px solid var(--line);border-radius:12px 12px 12px 3px;padding:8px 11px;font-size:14px;animation:in .45s both;animation-delay:calc(var(--i) * .18s)}
+@keyframes in{from{transform:translateY(6px);opacity:.25}to{transform:none;opacity:1}}
+.who{font-family:var(--f-mono);font-size:15px;font-weight:500;color:var(--teal);margin-bottom:2px}
+.who .en,.who .ko{display:inline}.who .ko{margin-left:6px}
+:root[data-lang="both"] .who .ko{font-size:inherit;color:var(--dim)}
+
+/* options */
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%;background:rgba(10,44,54,.82);border:1px solid var(--line);border-radius:12px;padding:13px 13px;color:var(--ink);font:inherit;cursor:pointer;transition:border-color .2s,background .2s}
+.opt:hover{border-color:var(--line2)}
+.opt[aria-checked="true"]{border-color:var(--teal);background:#0b3a44;box-shadow:inset 3px 0 0 var(--teal)}
+.badge{flex:none;min-width:34px;height:28px;padding:0 6px;border-radius:7px;border:1px solid var(--line2);font:500 13px/26px var(--f-mono);text-align:center;color:var(--teal);box-sizing:border-box}
+.opt[aria-checked="true"] .badge{background:var(--teal);color:var(--abyss);border-color:var(--teal)}
+.ot{min-width:0;display:flex;flex-direction:column;gap:6px}
+.otitle{font-weight:600;font-size:17px;color:#fff}
+:root[data-lang="both"] .otitle .ko{font-weight:500}
+.facts{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;font-size:15px;color:var(--mute)}
+.facts li{padding-left:12px;position:relative}
+.facts li::before{content:"";position:absolute;left:0;top:.72em;width:5px;height:1px;background:var(--teal)}
+:root[data-lang="both"] .facts .ko{color:var(--dim)}
+.onote{font-size:15px;color:var(--mute)}
+:root[data-lang="both"] .onote .ko{color:var(--dim)}
+.decide{position:sticky;bottom:0;margin:14px calc(-1 * max(16px,env(safe-area-inset-left,0px))) 0;padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:linear-gradient(to top,#03161c 82%,rgba(3,22,28,0));padding-top:26px;display:flex;flex-direction:column;align-items:stretch;gap:8px}
+.caution{display:flex;gap:12px;align-items:center;margin:4px 0 16px;padding:14px 16px;border:1.5px solid var(--gold);border-radius:12px;background:rgba(242,193,78,.12);font-size:17px;font-weight:600;line-height:1.45;color:#fff}
+.caution .en,.caution .ko{display:block}.caution .ko{font-size:17px;color:var(--gold);margin-top:2px}
+.cic{flex:none;width:30px;height:30px;border-radius:50%;background:var(--gold);color:#06222b;font:700 18px/30px Orbit,sans-serif;text-align:center}
+.dh{font-size:14px;color:var(--mute);text-align:center}
+.decide .btn{width:100%}
+.dh .en,.dh .ko{display:inline}.dh .ko{font-size:inherit;margin-left:6px}
+
+/* results, reports */
+.tag{display:inline-block;font-family:var(--f-mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);border:1px solid var(--line2);border-radius:4px;padding:2px 7px}
+.tag .en,.tag .ko{display:inline}.tag .ko{margin-left:6px;letter-spacing:0}
+:root[data-lang="both"] .tag .ko{font-size:inherit;color:inherit}
+.tag.live{color:var(--gold);border-color:rgba(242,193,78,.45)}
+.tag.live::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--gold);margin-right:7px;vertical-align:1px;animation:blink 1.4s infinite}
+@keyframes blink{50%{opacity:.25}}
+.result,.report,.panel,.ending{background:rgba(10,44,54,.82);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:20px}
+.result{margin-top:24px}
+.rbody{margin:0 0 4px}
+:root[data-lang="both"] .rbody .ko{margin-top:6px}
+.rbody.strong{font-size:18px;color:#fff;margin-top:10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.chip{font-family:var(--f-mono);font-size:13.5px;border-radius:6px;padding:4px 8px;border:1px solid}
+.chip.up{color:var(--teal);border-color:rgba(79,209,197,.4);background:rgba(79,209,197,.08)}
+.chip.down{color:var(--coral);border-color:rgba(255,138,122,.4);background:rgba(255,138,122,.08)}
+.rep-h{display:flex;justify-content:space-between;align-items:center;color:var(--mute);font-size:12px}
+.rep-row{font-family:var(--f-mono);font-size:12px;color:var(--dim);margin:12px 0 6px;border-top:1px dashed var(--line2);padding-top:10px}
+.rep-row .en,.rep-row .ko{display:inline}.rep-row .ko{margin-left:6px}
+:root[data-lang="both"] .rep-row .ko{font-size:inherit}
+.ptitle{font-family:var(--f-mono);font-weight:500;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);margin:0 0 12px}
+.ptitle .en,.ptitle .ko{display:inline}.ptitle .ko{margin-left:6px;letter-spacing:0}
+:root[data-lang="both"] .ptitle .ko{font-size:inherit;color:var(--dim)}
+.glist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.glist li{display:flex;gap:10px;align-items:flex-start;font-size:16px}
+.glist li>span:last-child{min-width:0}
+.glist b{display:block;color:#fff}
+.sw{flex:none;width:10px;height:10px;border-radius:2px;margin-top:6px}
+.rules{margin:14px 0 0;padding-top:12px;border-top:1px solid var(--line);font-size:16px}
+.warn{margin:12px 0 0;padding:9px 11px;border-radius:8px;background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.35);color:#ffc1b8;font-size:15.5px}
+:root[data-lang="both"] .warn .ko{color:#ffd9d3;opacity:.8}
+.hint{font-size:14.5px;color:var(--mute);margin:6px 0 0}
+.err{font-size:14.5px;color:var(--coral);margin:4px 0 0}
+.err .ko,.hint .ko{font-size:inherit}
+
+/* lock */
+.lock{text-align:center;padding:40px 0 10px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.screen-ic{width:84px;fill:none;stroke:var(--teal);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.screen-ic .pulse{stroke:var(--gold);stroke-dasharray:60;animation:trace 2.2s linear infinite}
+@keyframes trace{from{stroke-dashoffset:60}to{stroke-dashoffset:-60}}
+.lock .headline{font-size:24px}
+.lock .hint{max-width:34ch}
+.codeform{display:flex;flex-direction:column;gap:8px;width:100%;max-width:320px;margin-top:14px;text-align:left}
+.codeform input{font:500 22px var(--f-mono);letter-spacing:.3em;text-transform:uppercase;text-align:center}
+
+.lock.alert .screen-ic{stroke:var(--coral);animation:alertpulse 1s ease-in-out 3}
+.lock.alert .screen-ic .pulse{stroke:var(--coral)}
+.lock.alert .tag{color:var(--coral);border-color:rgba(255,138,122,.5)}
+@keyframes alertpulse{50%{filter:drop-shadow(0 0 10px rgba(255,138,122,.8));transform:scale(1.06)}}
+.hud-ctl{display:flex;gap:8px;align-items:center}
+.snd{width:34px;height:30px;border:1px solid var(--line2);border-radius:8px;background:transparent;cursor:pointer;display:grid;place-items:center;padding:0}
+.snd svg{width:20px;height:20px;fill:none;stroke:var(--teal);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.snd svg path:first-child{fill:var(--teal)}
+.snd .x{display:none}
+.snd[aria-pressed="false"] svg{stroke:var(--dim)}.snd[aria-pressed="false"] svg path:first-child{fill:var(--dim)}
+.snd[aria-pressed="false"] .w1,.snd[aria-pressed="false"] .w2{display:none}
+.snd[aria-pressed="false"] .x{display:inline}
+/* hidden meter */
+.meter{display:flex;align-items:center;gap:10px;margin-bottom:12px;font-size:12px;color:var(--sky)}
+.mbar{position:relative;flex:1;height:6px;border-radius:3px;background:var(--line)}
+.mbar i{position:absolute;inset:0 auto 0 0;background:var(--sky);border-radius:3px}
+.mbar em{position:absolute;top:-4px;bottom:-4px;width:1px;background:var(--mute)}
+
+/* ending */
+.norule{font-size:15.5px;color:var(--mute);margin:0}
+.ending{border-color:var(--teal);background:linear-gradient(160deg,rgba(13,52,64,.95),rgba(6,34,43,.95))}
+.etype{font-family:var(--f-disp);font-size:28px;line-height:1.25;color:#fff;margin-bottom:12px}
+:root[data-lang="both"] .etype .ko{font-size:18px;color:var(--teal);margin-top:4px}
+.ending dl{margin:0;display:grid;gap:4px}
+.ending dt{font-family:var(--f-mono);font-size:11.5px;color:var(--teal);letter-spacing:.08em;margin-top:10px}
+.ending dt .en,.ending dt .ko{display:inline}.ending dt .ko{margin-left:6px}
+:root[data-lang="both"] .ending dt .ko{font-size:inherit;color:var(--dim)}
+.ending dd{margin:0}
+.ending dd.q{font-family:var(--f-disp);font-size:17px;color:#fff}
+.finals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.fg{display:flex;flex-direction:column;gap:5px;min-width:0}
+.fv{font:500 26px var(--f-mono);font-variant-numeric:tabular-nums}
+.fbar{height:5px;border-radius:3px;background:var(--line);overflow:hidden}
+.fbar i{display:block;height:100%}
+.fl{font-size:12px;color:var(--mute)}
+:root[data-lang="both"] .fl .ko{display:block;margin:0;font-size:11px}
+.pathcode{font:500 clamp(18px,5.4vw,24px) var(--f-mono);color:var(--gold);letter-spacing:.02em;word-break:keep-all}
+.tl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;border-left:1px solid var(--line2);padding-left:14px}
+.tl li{font-size:15.5px;position:relative}
+.tl li::before{content:"";position:absolute;left:-18px;top:6px;width:7px;height:7px;border-radius:50%;background:var(--teal)}
+.tl .mono{display:block;font-size:11px;color:var(--dim);letter-spacing:.06em}
+.toppt{margin:22px 0 0;text-align:center;font-family:var(--f-disp);font-size:16px;color:var(--teal)}
+:root[data-lang="both"] .toppt .ko{font-size:14px}
+
+
+/* NPC carousel */
+.talk{margin:6px 0 4px}
+.talk .feed-h{margin-bottom:4px}
+.deck{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.deck::-webkit-scrollbar{display:none}
+.npc{flex:0 0 100%;min-width:0;scroll-snap-align:start;display:flex;flex-direction:column;align-items:center;gap:14px;padding:14px 2px 4px;box-sizing:border-box}
+.avatar{width:116px;height:116px;background:radial-gradient(circle at 50% 40%,#12424e,var(--panel));border:2px solid var(--line2);border-radius:16px;padding:12px;box-sizing:border-box}
+.avatar svg{width:100%;height:100%;display:block}
+.bubble{position:relative;background:#e6f5f3;color:#0b2a30;border-radius:14px;padding:14px 16px;width:100%;box-sizing:border-box;font-size:17px;line-height:1.55}
+.bubble::before{content:"";position:absolute;top:-9px;left:50%;margin-left:-9px;border:9px solid transparent;border-top:0;border-bottom-color:#e6f5f3}
+.bubble .who{color:#16776f;margin-bottom:4px}
+:root[data-lang="both"] .bubble .who .ko{color:#5d7c79}
+:root[data-lang="both"] .bubble .said .ko{color:#4a6664;margin-top:6px}
+.deck-nav{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:12px}
+.arrow{width:38px;height:38px;border-radius:50%;border:1px solid var(--line2);background:transparent;color:var(--teal);font:500 22px/1 var(--f-mono);cursor:pointer}
+.dots{display:flex;gap:7px}
+.dots i{width:8px;height:8px;border-radius:50%;background:var(--line2);cursor:pointer;transition:background .2s,transform .2s}
+.dots i.on{background:var(--teal);transform:scale(1.25)}
+.hint.center{text-align:center}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.small{padding:8px 12px;font-size:13px;margin-top:14px}
+/* gauge intro cards */
+.gcards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:6px}
+.gcard{background:rgba(10,44,54,.82);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.gc-top{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.gc-top b{font-size:17px;color:#fff}
+.gc-top .sw{margin-top:0}
+.gc-ko{font-size:14px;color:var(--mute)}
+:root[data-lang="en"] .gc-ko{display:none}
+.gc-d{font-size:14.5px;line-height:1.45;color:var(--ink)}
+:root[data-lang="both"] .gc-d .ko{font-size:13px}
+.gc-bar{height:5px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:auto}
+.gc-bar i{display:block;height:100%;width:50%}
+.gc-s{font:500 11px var(--f-mono);color:var(--dim);letter-spacing:.06em}
+.rlist{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:10px}
+.rlist li{background:var(--panel2);border-left:3px solid var(--teal);border-radius:0 8px 8px 0;padding:10px 12px;font-size:16px}
+:root[data-lang="both"] .rlist .ko{font-size:14px}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}.gd{opacity:0}}
+@media (min-width:600px){.headline{font-size:24px}}
+</style>
+</head>
+<body>
+
+<canvas id="sea" aria-hidden="true"></canvas>
+<div class="wrap">
+  <div id="hud" hidden>
+    <div class="hud-top">
+      <div class="hud-id"><span id="hud-step"></span><span id="hud-team"></span></div>
+      <div class="hud-ctl"><button type="button" id="snd" class="snd" aria-pressed="true" aria-label="Sound on"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="w1" d="M16.5 8.5a5 5 0 0 1 0 7"/><path class="w2" d="M19 6a8.5 8.5 0 0 1 0 12"/><path class="x" d="M16 9l6 6M22 9l-6 6"/></svg></button>
+      <div class="seg" role="group" aria-label="Language">
+        <button type="button" data-setlang="both" aria-pressed="true">EN+한</button>
+        <button type="button" data-setlang="en" aria-pressed="false">EN</button>
+        <button type="button" data-setlang="ko" aria-pressed="false">한</button>
+      </div></div>
+    </div>
+    <div id="gauges"></div>
+  </div>
+  <main id="main"></main>
+</div>
+<script>
+const STORY = {"title":{"en":"Should Washing Machines Come with Microplastic Filters?","ko":"세탁기에 미세플라스틱 필터를 장착해야 할까?"},"body":{"en":"You are an engineer on the washing machine development team at EcoWash. New research shows that microplastics shed from synthetic clothing in the wash flow into rivers and oceans, seriously harming marine ecosystems and human health. Yet there is currently no law requiring microplastic filters on washing machines. The company launches its new model in one month.","ko":"여러분은 가전회사 EcoWash의 세탁기 개발팀 엔지니어입니다. 최근 연구 결과, 합성섬유 의류를 세탁할 때 발생하는 미세플라스틱이 강과 바다로 흘러가 해양생태계와 인체에 심각한 악영향을 준다는 사실이 밝혀졌습니다. 하지만 현재 국내에는 세탁기 미세플라스틱 필터 설치 의무가 없습니다. 회사는 한 달 뒤 신제품 출시를 앞두고 있습니다."},"rules":{"en":"Your group's decisions move four gauges. No choice raises all four at once. Discuss first, then everyone taps the same option on their own phone.","ko":"여러분 그룹의 결정은 네 개의 게이지에 반영됩니다. 네 게이지를 동시에 올리는 선택은 없습니다. 먼저 토의한 뒤, 그룹원 모두 각자 휴대폰에서 같은 선택지를 누르세요."}};
+const RULES = [{"en":"No choice raises all four at once.","ko":"네 게이지를 한 번에 모두 올리는 선택은 없어요."},{"en":"Discuss as a group, then everyone picks the same option.","ko":"그룹끼리 토의한 뒤 모두 같은 선택지를 고르세요."}];
+const GAUGES = [{"key":"P","en":"Profit","ko":"수익","desc":{"en":"The company's money","ko":"회사의 돈"}},{"key":"T","en":"Trust","ko":"신뢰","desc":{"en":"Public reputation","ko":"소비자·언론의 평판"}},{"key":"E","en":"Ocean","ko":"환경","desc":{"en":"Less microplastic in the sea","ko":"바다로 가는 미세플라스틱 감소"}},{"key":"R","en":"Readiness","ko":"대비","desc":{"en":"Ready for future rules","ko":"미래 규제에 대한 준비"}}];
+const STEP1 = {"label":{"en":"STEP 01 · First Decision","ko":"STEP 01 · 첫 번째 선택"},"time":{"en":"D-30 · One month before launch","ko":"출시 한 달 전"},"prompt":{"en":"Which design will you choose?","ko":"어떤 설계를 선택하시겠습니까?"},"npcs":[],"options":{"A":{"title":{"en":"Fit the filter as standard","ko":"미세플라스틱 필터를 기본 장착한다"},"facts":[{"en":"Unit cost +8%, retail price goes up","ko":"원가 8% 증가, 소비자가격 상승"},{"en":"Microfibre emissions cut by about 80%","ko":"미세섬유 배출 약 80% 감소"},{"en":"Users must clean the filter regularly","ko":"사용자가 필터를 주기적으로 청소해야 함"}],"d":[-12,8,15,10],"head":{"en":"EcoWash becomes first to fit microplastic filters as standard","ko":"EcoWash, 업계 최초 미세플라스틱 필터 기본 탑재"},"body":{"en":"The filter is in. Unit cost and the retail price have gone up.","ko":"필터를 기본으로 달았습니다. 원가와 소비자가격이 올랐습니다."}},"B":{"title":{"en":"Launch without a filter","ko":"필터 없이 출시한다"},"facts":[{"en":"Price unchanged","ko":"기존 가격 유지"},{"en":"Microfibre emissions same as the current model","ko":"미세섬유 배출량은 기존 제품과 같음"},{"en":"No legal requirement to fit a filter today","ko":"현재 필터 설치 법적 의무 없음"}],"d":[12,0,-12,-10],"head":{"en":"EcoWash launches on schedule at the existing price","ko":"EcoWash 신제품, 기존 가격으로 예정대로 출시"},"body":{"en":"The product ships on time at the existing price. Emissions match the previous model.","ko":"제품이 기존 가격으로 일정대로 출시됐습니다. 배출량은 이전 모델과 같습니다."}},"C":{"title":{"en":"Sell the filter as an option","ko":"필터를 옵션으로 판매한다"},"facts":[{"en":"Machine price unchanged; filter bought separately","ko":"본체 가격 유지, 필터는 원하는 소비자만 추가 구매"},{"en":"Microfibre reduction depends on how many buy the filter","ko":"미세섬유 저감 효과는 필터 구매율에 따라 달라짐"},{"en":"Relatively low cost for the company","ko":"회사 비용 부담 상대적으로 적음"}],"d":[4,2,2,-2],"head":{"en":"EcoWash offers its microplastic filter as an add-on","ko":"EcoWash, 미세플라스틱 필터를 선택 옵션으로 판매"},"body":{"en":"The machine keeps its price. Customers who want the filter buy it separately.","ko":"본체 가격은 그대로입니다. 필터를 원하는 소비자만 따로 구매합니다."}}}};
+const STEP2 = {"label":{"en":"STEP 02 · Second Decision","ko":"STEP 02 · 두 번째 선택"},"time":{"en":"Six months after launch","ko":"출시 6개월 후"},"A":{"scene":{"en":"Praised as eco-friendly, but the higher price cut sales 15% below forecast. Management wants a fix.","ko":"친환경 제품으로 호평 받았지만, 가격이 올라 판매량이 예상보다 15% 줄었습니다. 회사는 대책을 요구합니다."},"npcs":[],"options":{"A-1":{"title":{"en":"Keep the filter as is","ko":"필터를 그대로 유지한다"},"note":{"en":"Price stays where it is.","ko":"가격은 그대로 유지됩니다."},"d":[-8,6,6,4],"head":{"en":"“Principles over price”: EcoWash keeps its filter","ko":"“가격보다 원칙” EcoWash, 필터 유지 선언"},"body":{"en":"Sales stay soft, but eco-friendly reviews keep coming.","ko":"판매는 여전히 부진하지만 친환경 평가는 이어집니다."}},"A-2":{"title":{"en":"Lower the filter spec and cut the price","ko":"필터 성능을 일부 낮춰 가격을 인하한다"},"note":{"en":"The part gets cheaper; the filter catches less.","ko":"부품값은 줄고, 필터가 거르는 양도 줄어듭니다."},"d":[6,-4,-6,-2],"head":{"en":"EcoWash cuts its price and adjusts the filter spec","ko":"EcoWash 가격 인하, 필터 사양도 조정"},"body":{"en":"The lower price brings sales back. The filter now catches less than before.","ko":"가격이 내려가 판매가 회복됩니다. 필터가 거르는 양은 전보다 줄었습니다."}},"A-3":{"title":{"en":"From the next model, make the filter optional instead of standard","ko":"다음 모델부터는 필터를 기본 장착이 아닌 옵션으로 변경한다"},"note":{"en":"The current model keeps its filter.","ko":"현재 모델은 필터를 유지합니다."},"d":[8,-6,-8,-6],"head":{"en":"EcoWash's next model to drop the standard filter","ko":"EcoWash 차기작, 필터 기본 탑재 중단 예정"},"body":{"en":"Profits improve on paper. Environmental groups take note of the plan.","ko":"장부상 수익은 개선됩니다. 환경단체가 이 계획을 주목합니다."}}}},"B":{"scene":{"en":"Sales are strong and there's no legal issue. But since launch, one country abroad has passed a bill requiring washing machine filters.","ko":"판매량은 좋고 법적 문제도 없습니다. 다만 출시 이후 해외 한 나라가 세탁기 필터 의무화 법안을 통과시켰습니다."},"npcs":[],"options":{"B-1":{"title":{"en":"Start developing filter technology now","ko":"지금부터 필터 기술 개발을 시작한다"},"note":{"en":"Uses R&D budget; no revenue yet.","ko":"R&D 예산 투입, 당장 매출은 없습니다."},"d":[-6,2,0,14],"head":{"en":"EcoWash sets up a microplastic filter research team","ko":"EcoWash, 미세플라스틱 필터 연구팀 신설"},"body":{"en":"Prototype work has begun. Costs rise this quarter.","ko":"시제품 개발이 시작됐습니다. 이번 분기 비용은 늘었습니다."}},"B-2":{"title":{"en":"Keep the current design and watch the market","ko":"현재 설계를 유지하고 시장 상황을 지켜본다"},"note":{"en":"No change and no new cost.","ko":"변화도, 추가 비용도 없습니다."},"d":[6,0,-4,-4],"head":{"en":"EcoWash keeps its current design amid strong sales","ko":"EcoWash, 판매 호조 속 현 설계 유지"},"body":{"en":"Sales keep climbing. Nothing changes inside the machine.","ko":"판매는 계속 늘어납니다. 세탁기 안에서는 아무것도 바뀌지 않았습니다."}},"B-3":{"title":{"en":"Review it from the next model's development stage","ko":"다음 모델 개발 단계부터 검토한다"},"note":{"en":"The decision moves to the next model.","ko":"결정을 차기 모델로 넘깁니다."},"d":[2,0,-2,4],"head":{"en":"EcoWash: “Filters to be reviewed in next-model development”","ko":"EcoWash “필터는 다음 모델 개발 단계부터 검토”"},"body":{"en":"Review meetings are held, but no design work has started.","ko":"검토 회의는 열리지만 설계 작업은 아직 시작되지 않았습니다."}}}},"C":{"scene":{"en":"Sales are steady, but only 18% of buyers chose the filter option.","ko":"판매는 안정적이지만, 필터 옵션 구매율은 18%에 그쳤습니다."},"npcs":[],"options":{"C-1":{"title":{"en":"Fit the filter as standard from the next model","ko":"다음 모델부터는 필터를 기본 장착한다"},"note":{"en":"The current model stays optional.","ko":"현재 모델은 옵션으로 유지됩니다."},"d":[-6,4,6,8],"head":{"en":"EcoWash announces standard filters from its next model","ko":"EcoWash 차기작부터 필터 기본 탑재 발표"},"body":{"en":"The current model stays optional for now. Design work begins.","ko":"현재 모델은 당분간 옵션 그대로입니다. 설계 작업이 시작됐습니다."}},"C-2":{"title":{"en":"Boost filter sales with an environmental campaign and extra marketing","ko":"환경 캠페인, 추가적인 마케팅을 통해 필터 구매를 유도한다"},"note":{"en":"Marketing budget goes into a campaign.","ko":"캠페인에 마케팅 예산을 씁니다."},"d":[-3,6,4,2],"head":{"en":"“Protect the ocean as you wash” campaign lifts filter sales","ko":"“빨래하며 바다 지키기” 캠페인, 필터 구매율 상승"},"body":{"en":"More customers add the filter. Most still don't.","ko":"필터를 사는 고객이 늘었습니다. 하지만 여전히 다수는 사지 않습니다."}},"C-3":{"title":{"en":"Keep the current approach","ko":"현재 방식을 유지한다"},"note":{"en":"No change and no new cost.","ko":"변화도, 추가 비용도 없습니다."},"d":[4,-2,-3,-2],"head":{"en":"EcoWash keeps its filter as a paid option","ko":"EcoWash, 필터 옵션 판매 방식 유지"},"body":{"en":"Uptake stays low. The option margin stays healthy.","ko":"구매율은 여전히 낮습니다. 옵션 마진은 좋은 편입니다."}}}}};
+const EVENT = {"lockTitle":{"en":"Event card triggered","ko":"이벤트 카드 발동"},"time":{"en":"One year after launch","ko":"출시 1년 후"}};
+const STEP3 = {"label":{"en":"STEP 03 · Emergency Dev Meeting","ko":"STEP 03 · 긴급 개발회의"},"time":{"en":"One year after launch","ko":"출시 1년 후"}};
+const HIDDEN = {"lockTitle":{"en":"Hidden card triggered","ko":"숨겨진 카드 발동"},"time":{"en":"Three years after launch","ko":"출시 3년 후"}};
+const STEP4 = {"label":{"en":"STEP 04 · Regulation Response","ko":"STEP 04 · 규제 대응 회의"},"time":{"en":"Three years after launch","ko":"출시 3년 후"}};
+const ENDINGS = [{"id":"forecaster","name":{"en":"Regulation-ready strategy","ko":"선제 대응형"},"gain":{"en":"Room to breathe when the regulation arrived","ko":"규제가 왔을 때의 여유"},"cost":{"en":"Early costs and the lost sales you endured","ko":"초기 비용과 판매 감소를 견딘 시간"},"q":{"en":"If the regulation had never come, would this still have been right?","ko":"규제가 끝내 생기지 않았다면 이 선택도 옳았을까?"}},{"id":"guardian","name":{"en":"Environment-first strategy","ko":"환경 우선형"},"gain":{"en":"The lowest emissions in the industry and firm principles","ko":"업계에서 가장 적은 배출, 강한 원칙"},"cost":{"en":"Financial strain and weaker price competitiveness","ko":"회사 재정 압박, 가격 경쟁력 약화"},"q":{"en":"If the company can't survive, can its principles?","ko":"회사가 버티지 못하면 그 원칙도 지속될 수 있을까?"}},{"id":"strategist","name":{"en":"Profit-first strategy","ko":"수익 우선형"},"gain":{"en":"High market share and profit","ko":"높은 점유율과 이익"},"cost":{"en":"Microplastics that reached the sea and a shaken reputation","ko":"바다로 흘러간 미세플라스틱, 흔들린 평판"},"q":{"en":"Is what the law allows the same as what an engineer should do?","ko":"법이 허용하는 것과 엔지니어가 해도 되는 것은 같은가?"}},{"id":"trust","name":{"en":"Reputation-focused strategy","ko":"평판 중심형"},"gain":{"en":"Consumer trust earned by facing criticism head-on","ko":"비판을 정면으로 다뤄 얻은 소비자 신뢰"},"cost":{"en":"The cost of moving only after the problem surfaced","ko":"문제가 드러난 뒤에야 움직인 비용"},"q":{"en":"Is protecting trust the same as protecting the environment?","ko":"신뢰를 지키려는 선택과 환경을 지키려는 선택은 같은 것일까?"}},{"id":"holdout","name":{"en":"Wait-and-see strategy","ko":"관망형"},"gain":{"en":"Minimal short-term cost","ko":"단기 비용 최소화"},"cost":{"en":"A falling reputation and the cost of a late response","ko":"평판 하락과 늦은 대응 비용"},"q":{"en":"When should an engineer push back on a company decision?","ko":"엔지니어가 회사 결정에 반대해야 할 때는 언제일까?"}},{"id":"balancer","name":{"en":"Balanced strategy","ko":"균형형"},"gain":{"en":"Stable operations that avoided extremes","ko":"극단을 피한 안정적 운영"},"cost":{"en":"No decisive result on any front","ko":"어느 쪽에서도 확실한 성과를 내지 못함"},"q":{"en":"Is compromise sharing responsibility, or postponing it?","ko":"타협은 책임을 나누는 것일까, 미루는 것일까?"}}];
+const ZSTATS = {"P":[41.5,13.5],"T":[50.4,15.1],"E":[59.3,16.7],"R":[58.9,12.2]};
+function pickEnding(g) {
+  const z = Object.keys(ZSTATS).map(k => [k, (g[k] - ZSTATS[k][0]) / ZSTATS[k][1]]).sort((a, b) => b[1] - a[1]);
+  let id;
+  if (z[0][1] >= 0.5) id = { P: "strategist", T: "trust", E: "guardian", R: "forecaster" }[z[0][0]];
+  else id = g.E < 45 && g.T < 45 ? "holdout" : "balancer";
+  return ENDINGS.find(e => e.id === id);
+}
+const SEALED = {"E":{"s":"oO13alA1wuYXia5YX1848w==","i":"Wa+qQ0Dcao6I41rw","n":250000,"c":"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"},"H":{"s":"Q3dRUm6j8TyZ4GDR8lWc5g==","i":"0J/int7IDD70E4ZL","n":250000,"c":"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"}};
+
+</script>
+<script>
+/* 16x16 pixel NPC portraits, drawn as SVG rects. One look per department. */
+const SPRITES = (() => {
+  const SKIN = ["#f3cfae", "#dcab82", "#b5815c"];
+  const LOOKS = {
+    "Finance":         { skin: 0, hair: "#2b2b38", style: "short", shirt: "#27406b", tie: "#f2c14e", glasses: true },
+    "Sales":           { skin: 1, hair: "#6b3f22", style: "short", shirt: "#e2725b" },
+    "Research":        { skin: 0, hair: "#1d1d24", style: "long", shirt: "#4fd1c5", coat: true, glasses: true },
+    "Marketing":       { skin: 0, hair: "#b5485c", style: "long", shirt: "#8b5cf6" },
+    "CEO":             { skin: 1, hair: "#9aa1a6", style: "short", shirt: "#1f2330", tie: "#d94b4b" },
+    "Parts":           { skin: 2, hair: "#3a2a1c", style: "short", shirt: "#3b82c4", cap: "#f2a33a" },
+    "Review":          { skin: 0, hair: "#d9b85c", style: "bob", shirt: "#5aa36a" },
+    "Senior engineer": { skin: 1, hair: "#4a4a52", style: "short", shirt: "#2f8f86", glasses: true },
+    "Customer care":   { skin: 0, hair: "#7a4a2a", style: "long", shirt: "#7fb2ff", headset: true },
+    "Service":         { skin: 2, hair: "#1d1d24", style: "short", shirt: "#e8873a", cap: "#2b5d7a" },
+    "PR":              { skin: 1, hair: "#1d1d24", style: "bob", shirt: "#d94f9a" },
+    "Legal":           { skin: 0, hair: "#3a2f2a", style: "short", shirt: "#20242c", tie: "#4f7fd1", glasses: true },
+    "Industry body":   { skin: 2, hair: "#c9c9c9", style: "short", shirt: "#7a5a3a", tie: "#4fd1c5" }
+  };
+
+  function grid(look) {
+    const g = Array.from({ length: 16 }, () => Array(16).fill(null));
+    const put = (x, y, c) => { if (x >= 0 && x < 16 && y >= 0 && y < 16) g[y][x] = c; };
+    const rect = (x0, y0, x1, y1, c) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) put(x, y, c); };
+    const skin = SKIN[look.skin], hair = look.hair, ink = "#16202a";
+    // body
+    rect(2, 12, 13, 15, look.coat ? "#eef3f2" : look.shirt);
+    if (look.coat) rect(6, 12, 9, 15, look.shirt);
+    rect(6, 11, 9, 11, skin); // neck
+    put(6, 12, "#ffffff"); put(9, 12, "#ffffff"); // collar
+    if (look.tie) { put(7, 12, look.tie); put(8, 12, look.tie); rect(7, 13, 8, 15, look.tie); }
+    // head
+    rect(4, 4, 11, 10, skin);
+    put(4, 10, null); put(11, 10, null);
+    // hair
+    rect(4, 2, 11, 3, hair); rect(3, 3, 12, 4, hair); put(4, 5, hair); put(11, 5, hair);
+    if (look.style === "long") { rect(3, 5, 3, 11, hair); rect(12, 5, 12, 11, hair); }
+    if (look.style === "bob") { rect(3, 5, 3, 9, hair); rect(12, 5, 12, 9, hair); }
+    if (look.cap) { rect(3, 1, 12, 3, look.cap); rect(10, 3, 13, 3, look.cap); }
+    // eyes, cheeks, mouth
+    put(6, 7, ink); put(9, 7, ink);
+    put(5, 8, "#f0a3a3"); put(10, 8, "#f0a3a3");
+    put(7, 9, "#9c4a4a"); put(8, 9, "#9c4a4a");
+    if (look.glasses) { const f = "#d7e2e8"; rect(5, 6, 7, 6, f); rect(8, 6, 10, 6, f); put(5, 7, f); put(7, 7, f); put(8, 7, f); put(10, 7, f); }
+    if (look.headset) { rect(3, 5, 3, 8, ink); rect(12, 5, 12, 8, ink); put(4, 9, ink); put(5, 10, ink); put(6, 10, "#4fd1c5"); }
+    return g;
+  }
+
+  return function sprite(name) {
+    const look = LOOKS[name] || LOOKS["Senior engineer"];
+    const g = grid(look);
+    let r = "";
+    g.forEach((row, y) => row.forEach((c, x) => { if (c) r += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${c}"/>`; }));
+    return `<svg viewBox="0 0 16 16" shape-rendering="crispEdges" role="img" aria-label="${name}">${r}</svg>`;
+  };
+})();
+const sprite = SPRITES;
+
+</script>
+<script>
+/* Generative ambient BGM + short SFX, all synthesized with Web Audio (no files).
+   BGM: slow minor-key pads, a soft low drone and an occasional sonar ping. Quiet by design. */
+const SOUND = (() => {
+  let ac = null, master = null, musicBus = null, sfxBus = null, on = true, playing = false, tension = false;
+  let chordTimer = null, pingTimer = null, beatTimer = null, chordIdx = 0;
+  const MUSIC_VOL = 0.08, SFX_VOL = 0.7;
+  const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+  // Am9, Fmaj7, Cmaj7/G, Em7 (MIDI)
+  const CHORDS = [[45, 57, 60, 64, 71], [41, 57, 60, 64, 69], [43, 55, 60, 64, 67], [40, 55, 59, 62, 67]];
+  const TENSE = [[38, 53, 57, 60, 65], [34, 53, 58, 62, 65]];
+
+  // iOS: let Web Audio play even when the ring/silent switch is on.
+  try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
+  const SILENT = "data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==";
+  let silentEl = null;
+  function unlockAudio() {
+    // must run inside a tap: create/resume the context, play a 1-sample buffer and a silent <audio> loop
+    if (!ensure()) return;
+    try { if (ac.state !== "running") ac.resume(); } catch (e) {}
+    try { const b = ac.createBuffer(1, 1, 22050), s = ac.createBufferSource(); s.buffer = b; s.connect(ac.destination); s.start(0); } catch (e) {}
+    try {
+      if (!silentEl) { silentEl = new Audio(SILENT); silentEl.loop = true; silentEl.setAttribute("playsinline", ""); silentEl.volume = 0.01; }
+      const pr = silentEl.play(); if (pr && pr.catch) pr.catch(() => {});
+    } catch (e) {}
+    if (wantMusic && on && !playing) startMusic();
+  }
+  ["pointerdown", "touchend", "click", "keydown"].forEach(ev => document.addEventListener(ev, unlockAudio, { capture: true, passive: true }));
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && ac && ac.state !== "running") { try { ac.resume(); } catch (e) {} } });
+  let wantMusic = false;
+
+  function ensure() {
+    if (ac) { if (ac.state !== "running") { try { ac.resume(); } catch (e) {} } return true; }
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false;
+    ac = new AC();
+    master = ac.createGain(); master.gain.value = on ? 1 : 0; master.connect(ac.destination);
+    musicBus = ac.createGain(); musicBus.gain.value = MUSIC_VOL;
+    const lp = ac.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 1100; lp.Q.value = 0.4;
+    // gentle echo on the music
+    const dl = ac.createDelay(1.5), fb = ac.createGain(), wet = ac.createGain();
+    dl.delayTime.value = 0.42; fb.gain.value = 0.28; wet.gain.value = 0.3;
+    musicBus.connect(lp); lp.connect(master); lp.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(wet); wet.connect(master);
+    sfxBus = ac.createGain(); sfxBus.gain.value = SFX_VOL; sfxBus.connect(master);
+    return true;
+  }
+
+  function pad(midi, t, dur, vol) {
+    [-6, 6].forEach(det => {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = "triangle"; o.frequency.value = mtof(midi); o.detune.value = det;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(vol, t + dur * 0.35);
+      g.gain.linearRampToValueAtTime(vol * 0.8, t + dur * 0.7);
+      g.gain.linearRampToValueAtTime(0.0001, t + dur + 1.5);
+      o.connect(g); g.connect(musicBus); o.start(t); o.stop(t + dur + 1.6);
+    });
+  }
+  function nextChord() {
+    if (!playing) return;
+    const set = tension ? TENSE : CHORDS, ch = set[chordIdx++ % set.length], t = ac.currentTime + 0.05, dur = 8;
+    ch.forEach((m, i) => pad(m, t, dur, i === 0 ? 0.55 : 0.28));
+    chordTimer = setTimeout(nextChord, dur * 1000 - 400);
+  }
+  function ping() {
+    if (!playing) return;
+    const t = ac.currentTime + 0.05, o = ac.createOscillator(), g = ac.createGain();
+    o.type = "sine"; o.frequency.value = tension ? 740 : 1175;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
+    o.connect(g); g.connect(musicBus); o.start(t); o.stop(t + 1.5);
+    pingTimer = setTimeout(ping, 9000 + Math.random() * 5000);
+  }
+  function beat() {
+    if (!playing || !tension) return;
+    [0, 0.22].forEach((off, k) => {
+      const t = ac.currentTime + 0.05 + off, o = ac.createOscillator(), g = ac.createGain();
+      o.frequency.setValueAtTime(70, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.18);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(k ? 0.5 : 0.8, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+      o.connect(g); g.connect(musicBus); o.start(t); o.stop(t + 0.3);
+    });
+    beatTimer = setTimeout(beat, 1100);
+  }
+
+  function startMusic() {
+    wantMusic = true;
+    if (!ensure() || playing) return;
+    playing = true; chordIdx = 0; nextChord(); pingTimer = setTimeout(ping, 4000);
+  }
+  function setTension(v) {
+    if (tension === v) return; tension = v;
+    if (!ac || !playing) return;
+    clearTimeout(beatTimer); if (v) beat();
+  }
+  function setOn(v) {
+    on = v; if (!ac) return;
+    master.gain.cancelScheduledValues(ac.currentTime);
+    master.gain.linearRampToValueAtTime(v ? 1 : 0, ac.currentTime + 0.3);
+  }
+  function duck(sec) {
+    if (!musicBus) return; const t = ac.currentTime;
+    musicBus.gain.cancelScheduledValues(t); musicBus.gain.setValueAtTime(musicBus.gain.value, t);
+    musicBus.gain.linearRampToValueAtTime(MUSIC_VOL * 0.15, t + 0.1);
+    musicBus.gain.linearRampToValueAtTime(MUSIC_VOL, t + sec);
+  }
+
+  function tone(f, t, len, vol, type = "sine", bus = sfxBus) {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    o.connect(g); g.connect(bus); o.start(t); o.stop(t + len + 0.02); return o;
+  }
+  function noise(t, len, vol, freq) {
+    const n = Math.floor(ac.sampleRate * len), b = ac.createBuffer(1, n, ac.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    const s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+    s.buffer = b; f.type = "bandpass"; f.frequency.value = freq; f.Q.value = 1.2; g.gain.value = vol;
+    s.connect(f); f.connect(g); g.connect(sfxBus); s.start(t);
+  }
+  function boom(t, vol) {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(38, t + 0.5);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+    o.connect(g); g.connect(sfxBus); o.start(t); o.stop(t + 1);
+  }
+
+  const sfx = {
+    tap() { if (!ensure()) return; tone(1400, ac.currentTime + 0.01, 0.05, 0.12, "triangle"); },
+    swipe() { if (!ensure()) return; tone(880, ac.currentTime + 0.01, 0.07, 0.08, "sine"); },
+    decide() { if (!ensure()) return; const t = ac.currentTime + 0.02; tone(660, t, 0.12, 0.25, "triangle"); tone(990, t + 0.09, 0.22, 0.25, "triangle"); },
+    news() { if (!ensure()) return; const t = ac.currentTime + 0.05; [784, 1047, 1319].forEach((f, i) => tone(f, t + i * 0.07, 0.5, 0.18)); },
+    unlock() { if (!ensure()) return; const t = ac.currentTime + 0.03; [523, 659, 784, 1047].forEach((f, i) => tone(f, t + i * 0.06, 0.35, 0.22, "triangle")); },
+    wrong() { if (!ensure()) return; const t = ac.currentTime + 0.02; tone(220, t, 0.14, 0.3, "square"); tone(185, t + 0.14, 0.2, 0.3, "square"); },
+    event() { // sonar ping + soft hit: something happened
+      if (!ensure()) return; duck(2.5); const t = ac.currentTime + 0.05;
+      tone(1318, t, 0.9, 0.35); tone(1976, t + 0.08, 0.6, 0.18); boom(t, 0.6);
+    },
+    hidden() { // glitch stutter, then a brass-like stab and a low hit: "Hidden card!"
+      if (!ensure()) return; duck(4); const t = ac.currentTime + 0.05;
+      for (let k = 0; k < 6; k++) noise(t + k * 0.055, 0.03, k % 2 ? 0.35 : 0.6, 500 + k * 220);
+      const s = t + 0.38;
+      [146.8, 220, 293.7, 349.2].forEach(f => {
+        const o = ac.createOscillator(), lp = ac.createBiquadFilter(), g = ac.createGain();
+        o.type = "sawtooth"; o.frequency.value = f;
+        lp.type = "lowpass"; lp.frequency.setValueAtTime(400, s); lp.frequency.linearRampToValueAtTime(2600, s + 0.06); lp.frequency.exponentialRampToValueAtTime(700, s + 1.2);
+        g.gain.setValueAtTime(0.0001, s); g.gain.exponentialRampToValueAtTime(0.22, s + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, s + 1.4);
+        o.connect(lp); lp.connect(g); g.connect(sfxBus); o.start(s); o.stop(s + 1.5);
+      });
+      boom(s, 0.9);
+    }
+  };
+
+  return { startMusic, setOn, setTension, sfx, get on() { return on; } };
+})();
+
+</script>
+<script>
+(() => {
+  const KEY = "egethics-v1";
+  const SEAL = typeof SEALED === "undefined" ? null : SEALED;
+  const opened = { E: !SEAL, H: !SEAL };
+  const ub64 = t => Uint8Array.from(atob(t), ch => ch.charCodeAt(0));
+  const revive = v => {
+    if (Array.isArray(v)) return v.map(revive);
+    if (v && typeof v === "object") {
+      if (v.__rd) { const [hi, lo] = v.__rd; return r => (r >= 65 ? hi : lo); }
+      const o = {}; for (const k in v) o[k] = revive(v[k]); return o;
+    }
+    return v;
+  };
+  const TARGET = { EVENT, STEP3, HIDDEN, STEP4 };
+  const known = {};
+  async function unseal(id, code) {
+    if (!SEAL) return code === (id === "H" ? HIDDEN.code : EVENT.code);
+    if (opened[id]) return known[id] === code;
+    try {
+      const p = SEAL[id], enc = new TextEncoder();
+      const base = await crypto.subtle.importKey("raw", enc.encode(code), "PBKDF2", false, ["deriveKey"]);
+      const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: ub64(p.s), iterations: p.n, hash: "SHA-256" }, base,
+        { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+      const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: ub64(p.i) }, key, ub64(p.c));
+      const data = revive(JSON.parse(new TextDecoder().decode(pt)));
+      for (const k in data) Object.assign(TARGET[k], data[k]);
+      opened[id] = true; known[id] = code; return true;
+    } catch (e) { return false; }
+  }
+  const normCode = v => v.replace(/\s+/g, "").toUpperCase();
+  const UI = {
+    eyebrow: { en: "Engineering Ethics · Simulation", ko: "공학윤리 · 시뮬레이션" },
+    team: { en: "Group name", ko: "그룹 이름" },
+    teamPh: "Group 0",
+    lang: { en: "Display language", ko: "표시 언어" },
+    start: { en: "Start", ko: "시작하기" },
+    resume: { en: "Continue where you left off", ko: "이어서 하기" },
+    newGame: { en: "New game", ko: "새로 시작" },
+    teamErr: { en: "Enter your group name first.", ko: "그룹 이름을 먼저 입력하세요." },
+    briefTag: { en: "Briefing", ko: "브리핑" },
+    gaugesTitle: { en: "Your four gauges", ko: "네 개의 게이지" },
+    toStep1: { en: "Go to Step 1", ko: "STEP 1로" },
+    toGauges: { en: "How your choices are measured", ko: "선택이 반영되는 방식" },
+    channel: { en: "Messages from other departments", ko: "다른 부서에서 온 메시지" },
+    swipe: { en: "Swipe to read the next message", ko: "옆으로 넘겨 다음 메시지를 보세요" },
+    toOptions: { en: "See the options", ko: "선택지 보기" },
+    backTalk: { en: "Back to messages", ko: "메시지 다시 보기" },
+    prevMsg: { en: "Previous message", ko: "이전 메시지" },
+    nextMsg: { en: "Next message", ko: "다음 메시지" },
+    decideHint: { en: "Discuss fully as a group, then everyone picks the same option.", ko: "그룹끼리 충분히 토의한 뒤, 모두 같은 선택지를 고르세요." },
+    undo: { en: "Back to the options", ko: "선택 다시 하기" },
+    decide: { en: "Decide", ko: "결정하기" },
+    news: { en: "Dev team decision", ko: "개발팀의 선택" },
+    next: { en: "Next", ko: "다음" },
+    look: { en: "Look at the PPT slide at the front", ko: "앞의 PPT 화면을 봐주세요" },
+    lockHint: { en: "Enter the code shown on the slide.", ko: "슬라이드에 나온 코드를 입력하세요." },
+    code: { en: "Code", ko: "코드" },
+    unlock: { en: "Unlock", ko: "열기" },
+    wrong: { en: "That's not it. Check the code on the slide again.", ko: "코드가 맞지 않아요. 슬라이드의 코드를 다시 확인하세요." },
+    report: { en: "Survey report", ko: "조사 보고서" },
+    reportRow: { en: "EcoWash entry", ko: "EcoWash 항목" },
+    toStep3: { en: "Go to Step 3", ko: "STEP 3로" },
+    regulation: { en: "New regulation", ko: "새 규제" },
+    impact: { en: "What it means for EcoWash", ko: "EcoWash가 받은 영향" },
+    toStep4: { en: "Go to Step 4", ko: "STEP 4로" },
+    seeEnding: { en: "See your result", ko: "결과 보기" },
+    endTag: { en: "Looking back", ko: "돌아보기" },
+    noRight: { en: "There is no right answer. Talk about what you gained and what you gave up.", ko: "정답은 없습니다. 무엇을 얻고 무엇을 내줬는지 이야기해 보세요." },
+    gained: { en: "What you gained", ko: "얻은 것" },
+    paid: { en: "What it cost", ko: "치른 대가" },
+    ask: { en: "Question for your group", ko: "토론 질문" },
+    finalG: { en: "Final gauges", ko: "최종 게이지" },
+    lowP: { en: "Financial strain: the budget for the next product will shrink.", ko: "회사 재정 압박: 다음 신제품 개발 예산이 줄어듭니다." },
+    path: { en: "Your group's path", ko: "우리 그룹 경로" },
+    pathHint: { en: "Copy this into Q1 of your worksheet.", ko: "활동지 Q1에 그대로 옮겨 적으세요." },
+    timeline: { en: "Headlines along the way", ko: "지나온 헤드라인" },
+    toPPT: { en: "Look at the PPT slide at the front for STEP 05. Each group gets one worksheet.", ko: "앞의 PPT 화면에서 STEP 05를 봐주세요. 그룹별 활동지를 받아 작성하세요." },
+    restart: { en: "Start over", ko: "처음부터" },
+    restartSure: { en: "Tap again to erase this run", ko: "한 번 더 누르면 기록이 지워져요" }
+  };
+
+  const L = o => `<span class="en">${o.en}</span><span class="ko">${o.ko}</span>`;
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const circ = { "1": "①", "2": "②", "3": "③" };
+
+  const fresh = () => ({ screen: "start", lang: "both", team: "", s1: null, s2: null, s3: null, s4: null,
+    g: { P: 50, T: 50, E: 50, R: 50 }, hist: [], sel: null, phase: 0 });
+  let S = fresh();
+  let started = false;
+
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+  const load = () => { try { const v = JSON.parse(localStorage.getItem(KEY)); return v && v.g ? v : null; } catch (e) { return null; } };
+
+  const root = document.documentElement;
+  const main = document.getElementById("main");
+  const hud = document.getElementById("hud");
+
+  function setLang(l) {
+    S.lang = l; root.dataset.lang = l;
+    document.querySelectorAll("[data-setlang]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.setlang === l)));
+    save();
+  }
+  document.querySelectorAll("[data-setlang]").forEach(b => b.addEventListener("click", () => setLang(b.dataset.setlang)));
+  const sndBtn = document.getElementById("snd");
+  function setSound(v) { S.sound = v; SOUND.setOn(v); sndBtn.setAttribute("aria-pressed", String(v)); sndBtn.setAttribute("aria-label", v ? "Sound on" : "Sound off"); save(); }
+  sndBtn.addEventListener("click", () => { setSound(!(S.sound !== false)); if (S.sound) SOUND.startMusic(); });
+
+  const clamp = v => Math.max(0, Math.min(100, v));
+  function apply(d) {
+    const keys = ["P", "T", "E", "R"];
+    keys.forEach((k, i) => { S.g[k] = clamp(S.g[k] + (d[i] || 0)); });
+    drawHud(d);
+  }
+
+  function drawHud(d) {
+    hud.hidden = S.screen === "start";
+    const step = { brief: "BRIEFING", q1: "STEP 01", r1: "STEP 01", q2: "STEP 02", r2: "STEP 02", lockE: "EVENT", event: "EVENT",
+      q3: "STEP 03", r3: "STEP 03", lockH: "HIDDEN", hidden: "HIDDEN", q4: "STEP 04", r4: "STEP 04", end: "RESULT" }[S.screen] || "";
+    document.getElementById("hud-step").textContent = step;
+    document.getElementById("hud-team").textContent = S.team;
+    GAUGES.forEach((gg, i) => {
+      const el = document.getElementById("g-" + gg.key);
+      el.querySelector(".gv").textContent = S.g[gg.key];
+      el.querySelector(".gfill").style.width = S.g[gg.key] + "%";
+      const dv = d && d[i];
+      if (dv) {
+        const f = el.querySelector(".gd");
+        f.textContent = (dv > 0 ? "+" : "−") + Math.abs(dv);
+        f.className = "gd " + (dv > 0 ? "up" : "down");
+        void f.offsetWidth; f.classList.add("show");
+      }
+    });
+  }
+
+  function chips(d) {
+    return `<div class="chips">${GAUGES.map((gg, i) => d[i] ? `<span class="chip ${d[i] > 0 ? "up" : "down"}"><span class="en">${gg.en}</span><span class="ko">${gg.ko}</span> <b>${d[i] > 0 ? "+" : "−"}${Math.abs(d[i])}</b></span>` : "").join("")}</div>`;
+  }
+
+  function npcs(list) {
+    return `<section class="talk" aria-label="${UI.channel.en}">
+      <div class="feed-h"><span class="dot"></span><span>${L(UI.channel)}</span></div>
+      <div class="deck" id="deck">
+        ${list.map((m, i) => `<article class="npc" aria-label="${i + 1} / ${list.length}">
+          <div class="avatar">${sprite(m.who.en)}</div>
+          <div class="bubble"><div class="who">${L(m.who)}</div><div class="said">${L(m)}</div></div>
+        </article>`).join("")}
+      </div>
+      <div class="deck-nav">
+        <button class="arrow" id="prev" aria-label="${UI.prevMsg.en}">\u2039</button>
+        <div class="dots">${list.map((_, i) => `<i data-i="${i}"></i>`).join("")}</div>
+        <button class="arrow" id="nextm" aria-label="${UI.nextMsg.en}">\u203a</button>
+      </div>
+      <p class="hint center">${L(UI.swipe)}</p>
+    </section>`;
+  }
+
+  function wireDeck(onLast) {
+    const deck = document.getElementById("deck"); if (!deck) return;
+    const dots = [...main.querySelectorAll(".dots i")], n = dots.length;
+    const idx = () => Math.round(deck.scrollLeft / deck.clientWidth);
+    const mark = () => { const k = idx(); dots.forEach((d, j) => d.classList.toggle("on", j === k)); if (k === n - 1) onLast(); };
+    let last = 0;
+    deck.addEventListener("scroll", () => { clearTimeout(deck._t); deck._t = setTimeout(() => { if (idx() !== last) { last = idx(); SOUND.sfx.swipe(); } mark(); }, 60); });
+    const to = k => deck.scrollTo({ left: Math.max(0, Math.min(n - 1, k)) * deck.clientWidth, behavior: "smooth" });
+    document.getElementById("prev").addEventListener("click", () => to(idx() - 1));
+    document.getElementById("nextm").addEventListener("click", () => to(idx() + 1));
+    dots.forEach((d, j) => d.addEventListener("click", () => to(j)));
+    mark();
+  }
+
+  function choiceScreen(cfg) {
+    const opts = Object.entries(cfg.options);
+    const head = `<header class="scr-h"><div class="eyebrow">${L(cfg.label)}</div><div class="when">${L(cfg.time)}</div></header>`;
+    const hasTalk = cfg.npcs && cfg.npcs.filter(Boolean).length > 0;
+    if (!S.phase && hasTalk) {
+      main.innerHTML = `${head}
+        ${cfg.scene ? `<p class="scene">${L(cfg.scene)}</p>` : ""}
+        ${npcs(cfg.npcs)}
+        <button class="btn wide" id="toopts">${L(UI.toOptions)} \u2192</button>`;
+      const b = document.getElementById("toopts");
+      wireDeck(() => b.classList.add("primary"));
+      b.addEventListener("click", () => setPhase(1));
+      return;
+    }
+    main.innerHTML = `${head}
+      <div class="caution" role="note"><span class="cic" aria-hidden="true">!</span><div>${L(UI.decideHint)}</div></div>
+      ${!hasTalk && cfg.scene ? `<p class="scene">${L(cfg.scene)}</p>` : ""}
+      <h2 class="prompt">${L(cfg.prompt || { en: "What will your group decide?", ko: "여러분 그룹의 결정은?" })}</h2>
+      <div class="opts" role="radiogroup">
+        ${opts.map(([id, o]) => `
+          <button class="opt" role="radio" aria-checked="false" data-id="${id}">
+            <span class="badge">${cfg.badge ? cfg.badge(id) : id}</span>
+            <span class="ot">
+              <span class="otitle">${L(o.title)}</span>
+              ${o.facts ? `<ul class="facts">${o.facts.map(f => `<li>${L(f)}</li>`).join("")}</ul>` : ""}
+              ${o.note ? `<span class="onote">${L(o.note)}</span>` : ""}
+            </span>
+          </button>`).join("")}
+      </div>
+      ${hasTalk ? `<button class="btn ghost small" id="back">\u2190 ${L(UI.backTalk)}</button>` : ""}
+      <div class="decide" id="decide">
+        <button class="btn primary" id="decide-btn" disabled><span class="pick" id="pick"></span>${L(UI.decide)}</button>
+      </div>`;
+    const db = document.getElementById("decide-btn");
+    main.querySelectorAll(".opt").forEach(b => b.addEventListener("click", () => {
+      main.querySelectorAll(".opt").forEach(x => x.setAttribute("aria-checked", "false"));
+      b.setAttribute("aria-checked", "true");
+      S.sel = b.dataset.id; SOUND.sfx.tap();
+      document.getElementById("pick").textContent = (cfg.badge ? cfg.badge(S.sel) : S.sel) + " \u00b7 ";
+      db.disabled = false;
+    }));
+    const bk = document.getElementById("back"); if (bk) bk.addEventListener("click", () => setPhase(0));
+    db.addEventListener("click", () => { if (S.sel) { SOUND.sfx.decide(); const snap = JSON.stringify(Object.assign({}, S, { undo: null })); S.undo = snap; cfg.onPick(S.sel); } });
+  }
+
+  function resultScreen(o, d, nextLabel, next, extra) {
+    main.innerHTML = `
+      <article class="result">
+        <div class="tag">${L(UI.news)}</div>
+        <h2 class="headline">${L(o.head)}</h2>
+        ${chips(d)}
+        ${extra || ""}
+      </article>
+      <button class="btn primary wide" id="next">${L(nextLabel)}</button>
+      ${S.undo ? `<button class="btn ghost wide" id="undo">\u2190 ${L(UI.undo)}</button>` : ""}`;
+    SOUND.sfx.news();
+    const ub = document.getElementById("undo");
+    if (ub) ub.addEventListener("click", () => { const back = JSON.parse(S.undo); S = Object.assign(fresh(), back); S.phase = 1; S.sel = null; S.undo = null; save(); render(); window.scrollTo(0, 0); });
+    document.getElementById("next").addEventListener("click", next);
+  }
+
+  function lockScreen(card, next) {
+    main.innerHTML = `
+      <section class="lock${card === HIDDEN ? " alert" : ""}">
+        <svg class="screen-ic" viewBox="0 0 64 48" aria-hidden="true"><rect x="3" y="3" width="58" height="34" rx="3"/><path d="M24 45h16M32 37v8"/><path class="pulse" d="M12 20h8l4-8 6 16 5-12 3 4h14"/></svg>
+        <div class="tag">${L(card.lockTitle)}</div>
+        <h2 class="headline">${L(UI.look)}</h2>
+        <p class="hint">${L(UI.lockHint)}</p>
+        <form id="codeform" class="codeform" novalidate>
+          <label for="code" class="lab">${L(UI.code)}</label>
+          <input id="code" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" inputmode="text">
+          <button class="btn primary" type="submit">${L(UI.unlock)}</button>
+        </form>
+        <p class="err" id="err" hidden>${L(UI.wrong)}</p>
+      </section>`;
+    const f = document.getElementById("codeform"), inp = document.getElementById("code"), err = document.getElementById("err");
+    inp.addEventListener("input", () => { err.hidden = true; inp.classList.remove("bad"); });
+    const id = card === HIDDEN ? "H" : "E", btn = f.querySelector("button");
+    let busy = false;
+    f.addEventListener("submit", async e => {
+      e.preventDefault();
+      if (busy || Date.now() < (S.lockUntil || 0)) return;
+      const code = normCode(inp.value);
+      if (!code) return;
+      busy = true; btn.disabled = true;
+      const ok = await unseal(id, code);
+      busy = false; btn.disabled = false;
+      if (ok) { S.keys = Object.assign({}, S.keys, { [id]: code }); S.tries = 0; SOUND.sfx.unlock(); next(); }
+      else {
+        S.tries = (S.tries || 0) + 1;
+        if (S.tries >= 5) { S.tries = 0; S.lockUntil = Date.now() + 15000; btn.disabled = true; setTimeout(() => { btn.disabled = false; }, 15000); }
+        save();
+        SOUND.sfx.wrong(); err.hidden = false; inp.classList.remove("bad"); void inp.offsetWidth; inp.classList.add("bad");
+      }
+    });
+  }
+
+  function hiddenTier() { return HIDDEN.tiers.find(t => S.g.R >= t.min); }
+
+  function ending() { return pickEnding(S.g); }
+
+  function pathCode() {
+    const p = [S.s1, S.s2, S.s3 ? S.s1 + circ[S.s3] : null, S.s4 ? circ[S.s4] : null].filter(Boolean);
+    return p.join(" → ");
+  }
+
+  const go = scr => { if (!/^r\d$/.test(scr)) S.undo = null; S.screen = scr; S.sel = null; S.phase = 0; save(); render(); window.scrollTo(0, 0); };
+  const setPhase = p => { S.phase = p; save(); render(); window.scrollTo(0, 0); };
+
+  async function reopen() {
+    for (const id of ["E", "H"]) if (S.keys && S.keys[id]) await unseal(id, S.keys[id]);
+  }
+  function render() {
+    if (!opened.E && ["event", "q3", "r3", "lockH", "hidden", "q4", "r4"].includes(S.screen)) S.screen = "lockE";
+    if (!opened.H && ["hidden", "q4", "r4"].includes(S.screen)) S.screen = "lockH";
+    root.dataset.screen = S.screen;
+    drawHud();
+    SOUND.setTension(S.screen === "lockE" || S.screen === "lockH" || S.screen === "q4");
+    switch (S.screen) {
+      case "start": return renderStart();
+      case "brief": return renderBrief();
+      case "q1": return choiceScreen({ label: STEP1.label, time: STEP1.time, prompt: STEP1.prompt, npcs: STEP1.npcs, options: STEP1.options,
+        onPick: id => { S.s1 = id; const o = STEP1.options[id]; apply(o.d); S.hist.push({ tag: "STEP 01 · " + id, head: o.head }); go("r1"); } });
+      case "r1": { const o = STEP1.options[S.s1]; return resultScreen(o, o.d, UI.next, () => go("q2")); }
+      case "q2": { const c = STEP2[S.s1]; return choiceScreen({ label: STEP2.label, time: STEP2.time, scene: c.scene, npcs: c.npcs, options: c.options,
+        onPick: id => { S.s2 = id; const o = c.options[id]; apply(o.d); S.hist.push({ tag: "STEP 02 · " + id, head: o.head }); go("r2"); } }); }
+      case "r2": { const o = STEP2[S.s1].options[S.s2]; return resultScreen(o, o.d, UI.next, () => { SOUND.sfx.event(); go("lockE"); }); }
+      case "lockE": return lockScreen(EVENT, () => { const r = EVENT.reports[S.s2]; apply([0, r.d, 0, 0]); go("event"); });
+      case "event": return renderEvent();
+      case "q3": { const c = STEP3[S.s1]; return choiceScreen({ label: STEP3.label, time: STEP3.time, scene: STEP3.scene, npcs: [STEP3.ceo, c.npc].filter(Boolean), options: c.options,
+        badge: id => S.s1 + circ[id],
+        onPick: id => { S.s3 = id; const o = c.options[id]; apply(o.d); S.hist.push({ tag: "STEP 03 · " + S.s1 + circ[id], head: o.head }); go("r3"); } }); }
+      case "r3": { const o = STEP3[S.s1].options[S.s3]; return resultScreen(o, o.d, UI.next, () => { SOUND.sfx.hidden(); go("lockH"); }); }
+      case "lockH": return lockScreen(HIDDEN, () => { apply([hiddenTier().d, 0, 0, 0]); S.hTier = hiddenTier().min; go("hidden"); });
+      case "hidden": return renderHidden();
+      case "q4": return choiceScreen({ label: STEP4.label, time: STEP4.time, scene: STEP4.scene, npcs: STEP4.npcs, options: STEP4.options,
+        badge: id => circ[id],
+        onPick: id => { S.s4 = id; const o = STEP4.options[id]; const d = o.d(S.g.R); S.d4 = d; apply(d); S.hist.push({ tag: "STEP 04 · " + circ[id], head: o.head }); go("r4"); } });
+      case "r4": { const o = STEP4.options[S.s4]; return resultScreen(o, S.d4, UI.seeEnding, () => go("end")); }
+      case "end": return renderEnd();
+    }
+  }
+
+  function renderStart() {
+    const saved = load();
+    const canResume = saved && saved.screen !== "start" && saved.screen !== "end";
+    main.innerHTML = `
+      <section class="title">
+        <div class="eyebrow">Engineering Ethics \u00b7 Simulation</div>
+        <div class="brand">EcoWash</div>
+        <h1>${STORY.title.en}</h1>
+        <p class="title-ko">${STORY.title.ko}</p>
+        <form id="startform" class="startform" novalidate>
+          <label class="lab" for="team">Group name</label>
+          <input id="team" name="team" maxlength="24" placeholder="${UI.teamPh}" value="${esc(S.team)}" autocomplete="off">
+          <p class="err" id="teamerr" hidden>Enter your group name first. <span class="ko-inline">그룹 이름을 먼저 입력하세요.</span></p>
+          <div class="lab">Display language</div>
+          <div class="seg big" role="group" aria-label="Display language">
+            <button type="button" data-setlang="both">EN + 한</button>
+            <button type="button" data-setlang="en">EN</button>
+            <button type="button" data-setlang="ko">한국어</button>
+          </div>
+          <button class="btn primary wide" type="submit">Start</button>
+          ${canResume ? `<button class="btn ghost wide" type="button" id="resume">Continue <span class="mono">\u00b7 ${esc(saved.team)}</span></button>` : ""}
+        </form>
+      </section>`;
+    main.querySelectorAll("[data-setlang]").forEach(b => b.addEventListener("click", () => setLang(b.dataset.setlang)));
+    setLang(S.lang);
+    const team = document.getElementById("team"), terr = document.getElementById("teamerr");
+    team.addEventListener("input", () => { terr.hidden = true; });
+    document.getElementById("startform").addEventListener("submit", e => {
+      e.preventDefault();
+      const v = team.value.trim();
+      if (!v) { terr.hidden = false; team.focus(); return; }
+      const lang = S.lang; S = fresh(); S.lang = lang; S.team = v; SOUND.startMusic(); go("brief");
+    });
+    const r = document.getElementById("resume");
+    if (r) r.addEventListener("click", () => { S = saved; setLang(S.lang || "both"); SOUND.startMusic(); reopen().then(render); });
+  }
+
+  function renderBrief() {
+    const head = `<header class="scr-h"><div class="eyebrow">${L(UI.briefTag)}</div><div class="when">D-30</div></header>`;
+    if (!S.phase) {
+      main.innerHTML = `${head}
+        <h2 class="headline">${L(STORY.title)}</h2>
+        <p class="scene">${L(STORY.body)}</p>
+        <button class="btn primary wide" id="next">${L(UI.toGauges)} \u2192</button>`;
+      document.getElementById("next").addEventListener("click", () => setPhase(1));
+      return;
+    }
+    main.innerHTML = `${head}
+      <h2 class="headline">${L(UI.gaugesTitle)}</h2>
+      <div class="gcards">${GAUGES.map(g => `<div class="gcard"><div class="gc-top"><span class="sw sw-${g.key}"></span><b>${g.en}</b><span class="gc-ko">${g.ko}</span></div><div class="gc-d">${L(g.desc)}</div><div class="gc-bar"><i class="sw-${g.key}"></i></div><div class="gc-s">START 50 / 100</div></div>`).join("")}</div>
+      <ul class="rlist">${RULES.map(r => `<li>${L(r)}</li>`).join("")}</ul>
+      <button class="btn primary wide" id="next">${L(UI.toStep1)}</button>`;
+    document.getElementById("next").addEventListener("click", () => go("q1"));
+  }
+
+  function renderEvent() {
+    const r = EVENT.reports[S.s2];
+    main.innerHTML = `
+      <header class="scr-h"><div class="eyebrow">EVENT CARD</div><div class="when">${L(EVENT.time)}</div></header>
+      <p class="scene">${L(EVENT.intro)}</p>
+      <article class="report">
+        <div class="rep-h"><span class="tag">${L(UI.report)}</span><span class="mono">${S.s2}</span></div>
+        <div class="rep-row">${L(UI.reportRow)}</div>
+        <p class="rbody">${L(r)}</p>
+        ${chips([0, r.d, 0, 0])}
+      </article>
+      <button class="btn primary wide" id="next">${L(UI.toStep3)}</button>`;
+    document.getElementById("next").addEventListener("click", () => go("q3"));
+  }
+
+  function renderHidden() {
+    const t = HIDDEN.tiers.find(x => x.min === S.hTier) || hiddenTier();
+    const showA2 = false;
+    main.innerHTML = `
+      <header class="scr-h"><div class="eyebrow">HIDDEN CARD</div><div class="when">${L(HIDDEN.time)}</div></header>
+      <article class="result">
+        <div class="tag live">${L(UI.regulation)}</div>
+        <p class="rbody strong">${L(HIDDEN.short)}</p>
+      </article>
+      <section class="panel">
+        <h3 class="ptitle">${L(UI.impact)}</h3>
+        <div class="meter"><span class="mono">READINESS ${S.g.R}</span><span class="mbar"><i style="width:${S.g.R}%"></i><em style="left:40%"></em><em style="left:65%"></em></span></div>
+        <p class="rbody">${L(t)}</p>
+        ${showA2 ? `<p class="warn">${L(HIDDEN.a2note)}</p>` : ""}
+        ${chips([t.d, 0, 0, 0])}
+      </section>
+      <button class="btn primary wide" id="next">${L(UI.toStep4)}</button>`;
+    document.getElementById("next").addEventListener("click", () => go("q4"));
+  }
+
+  function renderEnd() {
+    const e = ending();
+    main.innerHTML = `
+      <header class="scr-h"><div class="eyebrow">${L(UI.endTag)}</div><div class="when mono">${esc(S.team)}</div></header>
+      <section class="panel pathbox">
+        <h3 class="ptitle">${L(UI.path)}</h3>
+        <div class="pathcode">${pathCode()}</div>
+        <p class="hint">${L(UI.pathHint)}</p>
+      </section>
+      <section class="panel">
+        <h3 class="ptitle">${L(UI.timeline)}</h3>
+        <ol class="tl">${S.hist.map(h => `<li><span class="mono">${h.tag}</span>${L(h.head)}</li>`).join("")}</ol>
+      </section>
+      <p class="toppt">${L(UI.toPPT)}</p>
+      <button class="btn ghost wide" id="restart">${L(UI.restart)}</button>`;
+    const rb = document.getElementById("restart");
+    rb.addEventListener("click", () => {
+      if (!rb.dataset.sure) { rb.dataset.sure = 1; rb.innerHTML = L(UI.restartSure); return; }
+      const lang = S.lang, team = S.team, snd = S.sound; S = fresh(); S.lang = lang; S.team = team; S.sound = snd;
+      save(); render(); window.scrollTo(0, 0);
+    });
+  }
+
+  /* Hook the HUD gauges */
+  document.getElementById("gauges").innerHTML = GAUGES.map(g => `
+    <div class="g" id="g-${g.key}"><div class="gl"><span class="en">${g.en}</span><span class="ko">${g.ko}</span></div>
+    <div class="gn"><span class="gv">50</span><span class="gd"></span></div><div class="gbar"><i class="gfill sw-${g.key}"></i></div></div>`).join("");
+
+  const saved = load();
+  if (saved && saved.screen && saved.screen !== "start") S = Object.assign(fresh(), saved);
+  else if (saved) { S.lang = saved.lang || "both"; S.team = saved.team || ""; }
+  setLang(S.lang);
+  setSound(S.sound !== false);
+  reopen().then(render);
+
+  /* Drifting microfibres behind everything */
+  const cv = document.getElementById("sea");
+  const cx = cv.getContext("2d");
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let W, H, bits;
+  function size() {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    W = cv.width = innerWidth * dpr; H = cv.height = innerHeight * dpr;
+    bits = Array.from({ length: Math.round(innerWidth * innerHeight / 9000) }, () => ({
+      x: Math.random() * W, y: Math.random() * H, l: (4 + Math.random() * 10) * dpr, a: Math.random() * Math.PI,
+      v: (0.08 + Math.random() * 0.25) * dpr, s: (Math.random() - 0.5) * 0.004, o: 0.12 + Math.random() * 0.25,
+      c: Math.random() < 0.18 ? "242,193,78" : "143,214,206" }));
+  }
+  function frame() {
+    cx.clearRect(0, 0, W, H);
+    for (const b of bits) {
+      if (!reduce) { b.y -= b.v; b.x += Math.sin(b.y / 140) * 0.2; b.a += b.s; if (b.y < -20) { b.y = H + 20; b.x = Math.random() * W; } }
+      cx.strokeStyle = `rgba(${b.c},${b.o})`; cx.lineWidth = 1.2;
+      cx.beginPath(); cx.moveTo(b.x, b.y);
+      cx.quadraticCurveTo(b.x + Math.cos(b.a) * b.l * 0.6, b.y + Math.sin(b.a + 1) * b.l * 0.6, b.x + Math.cos(b.a) * b.l, b.y + Math.sin(b.a) * b.l);
+      cx.stroke();
+    }
+    if (!reduce) requestAnimationFrame(frame);
+  }
+  size(); frame();
+  addEventListener("resize", () => { size(); if (reduce) frame(); });
+})();
+
+</script>
+</body>
+</html>
